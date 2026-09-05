@@ -78,11 +78,11 @@ def render_county_section(county, county_data):
     count = len(agencies)
 
     if count == 0:
-        return f"""<section class="county-group" id="county-{slug}">
+        return f"""<section class="county-group no-data" id="county-{slug}">
   <details open>
-    <summary>
+    <summary class="no-data-summary">
       <span class="county-name">{county} County</span>
-      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+      <span class="not-found-badge">Not Found in FIBRS Dataset</span>
     </summary>
   </details>
 </section>"""
@@ -214,6 +214,23 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   }
   .county-name{font-size:14.5px;font-weight:700;color:var(--text);}
   .county-meta{font-size:11.5px;color:var(--muted);}
+
+  .county-group.no-data details{
+    border-color:rgba(248,81,73,0.4);
+    background:rgba(248,81,73,0.05);
+  }
+  .not-found-badge{
+    display:inline-flex;
+    align-items:center;
+    font-size:11px;
+    font-weight:700;
+    color:var(--bad);
+    background:rgba(248,81,73,0.12);
+    border:1px solid rgba(248,81,73,0.4);
+    padding:3px 10px;
+    border-radius:999px;
+    letter-spacing:0.02em;
+  }
 
   .agency-list{
     padding:0 18px 14px;
