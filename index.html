@@ -1,0 +1,4153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Florida FIBRS Crime Data - All Agencies</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#161b22;
+    --border:#30363d;
+    --text:#c9d1d9;
+    --muted:#8b949e;
+    --accent:#58a6ff;
+    --good:#39d353;
+    --bad:#f85149;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    padding:clamp(20px,4vw,40px) clamp(44px,9vw,72px) clamp(20px,4vw,40px) clamp(12px,3vw,16px);
+  }
+  .page-title{
+    max-width:900px;
+    margin:0 auto clamp(14px,2.5vw,18px);
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+  }
+  .page-title .titles{flex:1;min-width:0;}
+  .page-title h1{
+    font-size:clamp(15px,3.6vw,18px);
+    font-weight:600;
+    margin:0 0 4px;
+  }
+  .page-title p{
+    font-size:clamp(11px,2.6vw,12px);
+    color:var(--muted);
+    margin:0;
+  }
+  .page-title .about-link{
+    flex-shrink:0;
+    color:var(--accent);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:6px;
+    white-space:nowrap;
+  }
+  .page-title .about-link:hover{
+    background:rgba(88,166,255,0.1);
+  }
+
+  .content{max-width:900px;margin:0 auto;}
+
+  .search-wrap{margin-bottom:20px;}
+  .search-wrap input{
+    width:100%;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    color:var(--text);
+    padding:10px 14px;
+    font-size:14px;
+    font-family:inherit;
+  }
+  .search-wrap input:focus{outline:1px solid var(--accent);}
+  .search-wrap input::placeholder{color:var(--muted);}
+  .search-count{font-size:11px;color:var(--muted);margin-top:6px;}
+
+  .county-group{scroll-margin-top:16px;margin-bottom:10px;}
+  .county-group details{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+  }
+  .county-group summary{
+    cursor:pointer;
+    list-style:none;
+    padding:14px 18px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px 14px;
+  }
+  .county-group summary::-webkit-details-marker{display:none;}
+  .county-group summary::before{
+    content:">";
+    display:inline-block;
+    margin-right:8px;
+    color:var(--muted);
+    transition:transform 0.15s ease;
+  }
+  .county-group details[open] summary::before{
+    transform:rotate(90deg);
+  }
+  .county-name{font-size:14.5px;font-weight:700;color:var(--text);}
+  .county-meta{font-size:11.5px;color:var(--muted);}
+
+  .agency-list{
+    padding:0 18px 14px;
+    border-top:1px solid var(--border);
+  }
+  .agency-row{
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:4px 10px;
+    padding:9px 0;
+    border-bottom:1px solid #1c2128;
+  }
+  .agency-row:last-child{border-bottom:none;}
+  .status-dot{
+    width:8px;height:8px;border-radius:50%;
+    flex-shrink:0;
+    align-self:center;
+  }
+  .status-dot.current{background:var(--good);}
+  .status-dot.stale{background:var(--bad);}
+  .agency-name{
+    color:var(--accent);
+    text-decoration:none;
+    font-size:13.5px;
+    font-weight:600;
+  }
+  .agency-name:hover{text-decoration:underline;}
+  .agency-stats{
+    font-size:12px;
+    color:var(--muted);
+    white-space:normal;
+  }
+  .status-label{font-weight:600;}
+  .status-label.current{color:var(--good);}
+  .status-label.stale{color:var(--bad);}
+  .agency-stats .sep{color:var(--border);margin:0 2px;}
+
+  .agency-row.hidden{display:none;}
+  .county-group.hidden{display:none;}
+
+  .alpha-nav{
+    position:fixed;top:0;right:0;bottom:0;
+    width:clamp(34px,7vw,48px);
+    display:flex;flex-direction:column;
+    background:var(--panel);
+    border-left:1px solid var(--border);
+    z-index:100;
+    padding:10px 0;
+  }
+  .alpha-nav button{
+    appearance:none;border:none;background:none;
+    color:var(--border);
+    font-size:clamp(10px,1.7vh,14px);
+    font-family:inherit;line-height:1;
+    flex:1 1 0;min-height:0;width:100%;
+    display:flex;align-items:center;justify-content:center;
+    cursor:default;
+    transition:background 0.12s ease,color 0.12s ease;
+  }
+  .alpha-nav button.active{color:var(--muted);cursor:pointer;font-weight:600;}
+  .alpha-nav button.active:hover{color:var(--accent);background:rgba(88,166,255,0.08);}
+  .alpha-nav button.active:active{background:rgba(88,166,255,0.18);}
+  .alpha-nav button.current{color:var(--accent);background:rgba(88,166,255,0.12);}
+
+  @media (max-width:600px){
+    body{padding:20px 40px 20px 12px;}
+    .agency-stats{font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page-title">
+  <div class="titles">
+    <h1>Florida FIBRS Crime Data - All Agencies</h1>
+    <p>Data through July 2026 (67 months since January 2021) - 292 agencies across Florida's 67 counties - 172 currently reporting</p>
+  </div>
+  <a class="about-link" href="readme.html">About This Data</a>
+</div>
+
+<div class="content">
+  <div class="search-wrap">
+    <input type="text" id="searchBox" placeholder="Search by agency or county name...">
+    <div class="search-count" id="searchCount"></div>
+  </div>
+
+  <div id="countyList">
+<section class="county-group" id="county-alachua">
+  <details open>
+    <summary>
+      <span class="county-name">Alachua County</span>
+      <span class="county-meta">5 agencies - 2 current - 61,669 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/alachua-county-sheriffs-office.html">Alachua County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          18,052 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-gainesville.html">FHP - Gainesville</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          23 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/gainesville-police-department.html">Gainesville Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          54 of 67 months submitted
+          <span class="sep">-</span>
+          40,726 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/high-springs-police-department.html">High Springs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          24 of 67 months submitted
+          <span class="sep">-</span>
+          269 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/university-of-florida-police-department.html">University of Florida Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          65 of 67 months submitted
+          <span class="sep">-</span>
+          2,599 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-baker">
+  <details open>
+    <summary>
+      <span class="county-name">Baker County</span>
+      <span class="county-meta">2 agencies - 1 current - 5,399 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/baker-county-sheriffs-office.html">Baker County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          5,398 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-baker-co.html">FHP - Baker Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-bay">
+  <details open>
+    <summary>
+      <span class="county-name">Bay County</span>
+      <span class="county-meta">6 agencies - 1 current - 15,355 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/bay-county-sheriffs-office.html">Bay County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          46 of 67 months submitted
+          <span class="sep">-</span>
+          6,541 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-panama-city.html">FHP - Panama City</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          20 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/lynn-haven-police-department.html">Lynn Haven Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          30 of 67 months submitted
+          <span class="sep">-</span>
+          930 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/panama-city-police-department.html">Panama City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          6,587 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/parker-police-department.html">Parker Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          18 of 67 months submitted
+          <span class="sep">-</span>
+          217 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/springfield-police-department.html">Springfield Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          26 of 67 months submitted
+          <span class="sep">-</span>
+          1,060 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-bradford">
+  <details open>
+    <summary>
+      <span class="county-name">Bradford County</span>
+      <span class="county-meta">2 agencies - 1 current - 2,242 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/bradford-county-sheriffs-office.html">Bradford County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          49 of 67 months submitted
+          <span class="sep">-</span>
+          2,241 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/lawtey-police-department.html">Lawtey Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-brevard">
+  <details>
+    <summary>
+      <span class="county-name">Brevard County</span>
+      <span class="county-meta">10 agencies - 6 current - 75,710 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/brevard-county-sheriffs-office.html">Brevard County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          41 of 67 months submitted
+          <span class="sep">-</span>
+          14,120 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/cocoa-police-department.html">Cocoa Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          36 of 67 months submitted
+          <span class="sep">-</span>
+          6,553 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-melbourne.html">FHP - Melbourne</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          7 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/indian-harbour-beach-police-department.html">Indian Harbour Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          640 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/melbourne-beach-police-department.html">Melbourne Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          15 of 67 months submitted
+          <span class="sep">-</span>
+          58 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/melbourne-police-department.html">Melbourne Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          12,506 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/palm-bay-police-department.html">Palm Bay Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          60 of 67 months submitted
+          <span class="sep">-</span>
+          31,584 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/satellite-beach-police-department.html">Satellite Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          42 of 67 months submitted
+          <span class="sep">-</span>
+          1,091 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/titusville-police-department.html">Titusville Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          47 of 67 months submitted
+          <span class="sep">-</span>
+          5,640 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/west-melbourne-police-department.html">West Melbourne Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          3,511 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-broward">
+  <details>
+    <summary>
+      <span class="county-name">Broward County</span>
+      <span class="county-meta">12 agencies - 7 current - 111,570 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/coconut-creek-police-department.html">Coconut Creek Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          24 of 67 months submitted
+          <span class="sep">-</span>
+          431 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/coral-springs-police-department.html">Coral Springs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          60 of 67 months submitted
+          <span class="sep">-</span>
+          17,364 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/davie-police-department.html">Davie Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          51 of 67 months submitted
+          <span class="sep">-</span>
+          14,511 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-fort-lauderdale.html">FHP - Fort Lauderdale</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          39 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fort-lauderdale-police-department.html">Fort Lauderdale Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          54 of 67 months submitted
+          <span class="sep">-</span>
+          50,717 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/hillsboro-beach-police-department.html">Hillsboro Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          24 of 67 months submitted
+          <span class="sep">-</span>
+          65 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/miramar-police-department.html">Miramar Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          15,595 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/pembroke-park-police-department.html">Pembroke Park Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          20 of 67 months submitted
+          <span class="sep">-</span>
+          301 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/pembroke-pines-police-department.html">Pembroke Pines Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          44 of 67 months submitted
+          <span class="sep">-</span>
+          4,400 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/plantation-police-department.html">Plantation Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          15 of 67 months submitted
+          <span class="sep">-</span>
+          2,484 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/seminole-police-department.html">Seminole Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          4,983 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/town-of-southwest-ranches.html">Town of Southwest Ranches</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          680 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-calhoun">
+  <details open>
+    <summary>
+      <span class="county-name">Calhoun County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-charlotte">
+  <details open>
+    <summary>
+      <span class="county-name">Charlotte County</span>
+      <span class="county-meta">2 agencies - 2 current - 31,501 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/charlotte-county-sheriffs-office.html">Charlotte County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          29,826 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/punta-gorda-police-department.html">Punta Gorda Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          1,675 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-citrus">
+  <details open>
+    <summary>
+      <span class="county-name">Citrus County</span>
+      <span class="county-meta">1 agency - 1 current - 3 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-citrus-co.html">FHP - Citrus Co</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          3 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-clay">
+  <details open>
+    <summary>
+      <span class="county-name">Clay County</span>
+      <span class="county-meta">5 agencies - 2 current - 39,753 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/clay-county-school-board-police-department.html">Clay County School Board Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          40 of 67 months submitted
+          <span class="sep">-</span>
+          1,145 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/clay-county-sheriffs-office.html">Clay County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          34,758 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-clay-co.html">FHP - Clay Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/green-cove-springs-police-department.html">Green Cove Springs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          2,345 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/orange-park-police-department.html">Orange Park Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          63 of 67 months submitted
+          <span class="sep">-</span>
+          1,503 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-collier">
+  <details open>
+    <summary>
+      <span class="county-name">Collier County</span>
+      <span class="county-meta">3 agencies - 2 current - 53,640 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/collier-county-sheriffs-office.html">Collier County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          52,683 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-everglades-city.html">FHP - Everglades City</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/marco-island-police-department.html">Marco Island Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          956 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-columbia">
+  <details open>
+    <summary>
+      <span class="county-name">Columbia County</span>
+      <span class="county-meta">3 agencies - 2 current - 11,222 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/columbia-county-sheriffs-office.html">Columbia County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          9,261 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-lake-city.html">FHP - Lake City</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          19 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lake-city-police-department.html">Lake City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          40 of 67 months submitted
+          <span class="sep">-</span>
+          1,942 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-desoto">
+  <details open>
+    <summary>
+      <span class="county-name">DeSoto County</span>
+      <span class="county-meta">2 agencies - 2 current - 8,127 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/arcadia-police-department.html">Arcadia Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          47 of 67 months submitted
+          <span class="sep">-</span>
+          1,570 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/desoto-county-sheriffs-office.html">Desoto County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          6,557 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-dixie">
+  <details open>
+    <summary>
+      <span class="county-name">Dixie County</span>
+      <span class="county-meta">3 agencies - 1 current - 325 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/cross-city-police-department.html">Cross City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          169 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/dixie-county-sheriffs-office.html">Dixie County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          23 of 67 months submitted
+          <span class="sep">-</span>
+          153 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-cross-city.html">FHP - Cross City</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-duval">
+  <details>
+    <summary>
+      <span class="county-name">Duval County</span>
+      <span class="county-meta">8 agencies - 6 current - 395,430 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/atlantic-beach-police-department.html">Atlantic Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          3,265 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/duval-county-school-police-department.html">Duval County School Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          12,252 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-jacksonville.html">FHP - Jacksonville</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          30 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/florida-state-college-at-jacksonville-police-department.html">Florida State College at Jacksonville Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          17 of 67 months submitted
+          <span class="sep">-</span>
+          38 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/jacksonville-aviation-authority-pd.html">Jacksonville Aviation Authority PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          741 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/jacksonville-beach-police-department.html">Jacksonville Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          33 of 67 months submitted
+          <span class="sep">-</span>
+          2,131 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/jacksonville-sheriffs-office.html">Jacksonville Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          375,705 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/neptune-beach-police-department.html">Neptune Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,268 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-escambia">
+  <details open>
+    <summary>
+      <span class="county-name">Escambia County</span>
+      <span class="county-meta">5 agencies - 1 current - 6,093 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-pensacola.html">FDLE - Pensacola</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          17 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-pensacola.html">FHP - Pensacola</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/pensacola-police-department.html">Pensacola Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          5,868 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/pensacola-state-college-police-department.html">Pensacola State College Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          7 of 67 months submitted
+          <span class="sep">-</span>
+          24 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/university-of-west-florida-police-dept.html">University of West Florida Police Dept</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          49 of 67 months submitted
+          <span class="sep">-</span>
+          182 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-flagler">
+  <details open>
+    <summary>
+      <span class="county-name">Flagler County</span>
+      <span class="county-meta">3 agencies - 2 current - 8,298 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-flagler-co.html">FHP - Flagler Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/flagler-beach-police-department.html">Flagler Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          31 of 67 months submitted
+          <span class="sep">-</span>
+          394 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/flagler-county-sheriffs-office.html">Flagler County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          7,902 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-franklin">
+  <details open>
+    <summary>
+      <span class="county-name">Franklin County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-gadsden">
+  <details open>
+    <summary>
+      <span class="county-name">Gadsden County</span>
+      <span class="county-meta">1 agency - 0 current - 2 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-quincy.html">FHP - Quincy</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-gilchrist">
+  <details open>
+    <summary>
+      <span class="county-name">Gilchrist County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-glades">
+  <details open>
+    <summary>
+      <span class="county-name">Glades County</span>
+      <span class="county-meta">1 agency - 1 current - 675 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/glades-county-sheriffs-office.html">Glades County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          675 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-gulf">
+  <details open>
+    <summary>
+      <span class="county-name">Gulf County</span>
+      <span class="county-meta">2 agencies - 0 current - 504 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/gulf-county-sheriffs-office.html">Gulf County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          19 of 67 months submitted
+          <span class="sep">-</span>
+          419 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/port-st-joe-police-department.html">Port St. Joe Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          85 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-hamilton">
+  <details open>
+    <summary>
+      <span class="county-name">Hamilton County</span>
+      <span class="county-meta">2 agencies - 0 current - 1,806 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-hamilton-co.html">FHP - Hamilton Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          6 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/hamilton-county-sheriffs-office.html">Hamilton County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          1,800 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-hardee">
+  <details open>
+    <summary>
+      <span class="county-name">Hardee County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-hendry">
+  <details open>
+    <summary>
+      <span class="county-name">Hendry County</span>
+      <span class="county-meta">2 agencies - 1 current - 6,549 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/clewiston-police-department.html">Clewiston Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          54 of 67 months submitted
+          <span class="sep">-</span>
+          520 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/hendry-county-sheriffs-office.html">Hendry County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          6,029 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-hernando">
+  <details open>
+    <summary>
+      <span class="county-name">Hernando County</span>
+      <span class="county-meta">3 agencies - 2 current - 41,460 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/city-of-brooksville.html">City of Brooksville</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          4,230 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-brooksville.html">FHP - Brooksville</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          16 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/hernando-county-sheriffs-office.html">Hernando County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          37,214 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-highlands">
+  <details open>
+    <summary>
+      <span class="county-name">Highlands County</span>
+      <span class="county-meta">3 agencies - 3 current - 3,138 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/highlands-county-sheriffs-office.html">Highlands County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          24 of 67 months submitted
+          <span class="sep">-</span>
+          2,197 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lake-placid-police-department.html">Lake Placid Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          31 of 67 months submitted
+          <span class="sep">-</span>
+          201 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sebring-police-department.html">Sebring Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          25 of 67 months submitted
+          <span class="sep">-</span>
+          740 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-hillsborough">
+  <details>
+    <summary>
+      <span class="county-name">Hillsborough County</span>
+      <span class="county-meta">8 agencies - 4 current - 263,667 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-tampa-tboc.html">FDLE - Tampa TBOC</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          16 of 67 months submitted
+          <span class="sep">-</span>
+          30 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-tampa.html">FHP - Tampa</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          12 of 67 months submitted
+          <span class="sep">-</span>
+          60 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/hillsborough-county-sheriffs-office.html">Hillsborough County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          134,698 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/plant-city-police-department.html">Plant City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/tampa-international-airport-police-dept.html">Tampa International Airport Police Dept.</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          51 of 67 months submitted
+          <span class="sep">-</span>
+          1,681 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/tampa-police-department.html">Tampa Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          124,170 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/temple-terrace-police-department.html">Temple Terrace Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          34 of 67 months submitted
+          <span class="sep">-</span>
+          1,733 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/university-of-south-florida-police-dept.html">University of South Florida Police Dept</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          50 of 67 months submitted
+          <span class="sep">-</span>
+          1,292 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-holmes">
+  <details open>
+    <summary>
+      <span class="county-name">Holmes County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-indian-river">
+  <details open>
+    <summary>
+      <span class="county-name">Indian River County</span>
+      <span class="county-meta">4 agencies - 2 current - 11,214 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-indian-river-co.html">FHP - Indian River Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/indian-river-county-sheriffs-office.html">Indian River County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          8,949 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sebastian-police-department.html">Sebastian Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          27 of 67 months submitted
+          <span class="sep">-</span>
+          1,405 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/vero-beach-police-department.html">Vero Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          45 of 67 months submitted
+          <span class="sep">-</span>
+          858 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-jackson">
+  <details open>
+    <summary>
+      <span class="county-name">Jackson County</span>
+      <span class="county-meta">3 agencies - 2 current - 3,905 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-marianna.html">FHP - Marianna</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/jackson-county-sheriffs-office.html">Jackson County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          60 of 67 months submitted
+          <span class="sep">-</span>
+          3,339 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/marianna-police-department.html">Marianna Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          31 of 67 months submitted
+          <span class="sep">-</span>
+          565 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-jefferson">
+  <details open>
+    <summary>
+      <span class="county-name">Jefferson County</span>
+      <span class="county-meta">2 agencies - 1 current - 2,272 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-jefferson-co.html">FHP - Jefferson Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/jefferson-county-sheriffs-office.html">Jefferson County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          2,271 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-lafayette">
+  <details open>
+    <summary>
+      <span class="county-name">Lafayette County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-lake">
+  <details>
+    <summary>
+      <span class="county-name">Lake County</span>
+      <span class="county-meta">13 agencies - 9 current - 21,046 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/clermont-police-department.html">Clermont Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          12 of 67 months submitted
+          <span class="sep">-</span>
+          1,368 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/eustis-police-department.html">Eustis Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          21 of 67 months submitted
+          <span class="sep">-</span>
+          827 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-leesburg.html">FHP - Leesburg</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/groveland-police-department.html">Groveland Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          10 of 67 months submitted
+          <span class="sep">-</span>
+          171 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/howey-in-the-hills-police-department.html">Howey-In-The-Hills Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          374 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/lady-lake-police-department.html">Lady Lake Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          8 of 67 months submitted
+          <span class="sep">-</span>
+          187 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lake-county-sheriffs-office.html">Lake County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          17 of 67 months submitted
+          <span class="sep">-</span>
+          6,207 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/leesburg-police-department.html">Leesburg Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          10,033 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/mascotte-police-department.html">Mascotte Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          30 of 67 months submitted
+          <span class="sep">-</span>
+          566 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/minneola-police-department.html">Minneola Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          17 of 67 months submitted
+          <span class="sep">-</span>
+          408 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/mount-dora-police-department.html">Mount Dora Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          11 of 67 months submitted
+          <span class="sep">-</span>
+          308 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/tavares-police-department.html">Tavares Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          12 of 67 months submitted
+          <span class="sep">-</span>
+          487 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/umatilla-police-department.html">Umatilla Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          10 of 67 months submitted
+          <span class="sep">-</span>
+          109 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-lee">
+  <details open>
+    <summary>
+      <span class="county-name">Lee County</span>
+      <span class="county-meta">5 agencies - 2 current - 71,000 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/cape-coral-police-department.html">Cape Coral Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          34 of 67 months submitted
+          <span class="sep">-</span>
+          19,125 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-fort-myers-ra.html">FDLE - Fort Myers RA</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          21 of 67 months submitted
+          <span class="sep">-</span>
+          49 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fort-myers-police-department.html">Fort Myers Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          65 of 67 months submitted
+          <span class="sep">-</span>
+          26,327 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lee-county-sheriffs-office.html">Lee County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          25,329 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sanibel-police-department.html">Sanibel Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          19 of 67 months submitted
+          <span class="sep">-</span>
+          170 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-leon">
+  <details>
+    <summary>
+      <span class="county-name">Leon County</span>
+      <span class="county-meta">10 agencies - 2 current - 87,795 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-tallahassee.html">FDLE - Tallahassee</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          31 of 67 months submitted
+          <span class="sep">-</span>
+          55 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-capitol-police.html">FDLE Capitol Police</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          5 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-tallahassee.html">FHP - Tallahassee</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          43 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fla-agricultural-and-mechanical-univ-pd.html">Fla Agricultural and Mechanical Univ PD</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          16 of 67 months submitted
+          <span class="sep">-</span>
+          61 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/florida-department-of-the-lottery-leon.html">Florida Department of the Lottery - Leon</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/florida-gaming-commission.html">Florida Gaming Commission</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          21 of 67 months submitted
+          <span class="sep">-</span>
+          95 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/florida-state-university-police-dept.html">Florida State University Police Dept.</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          50 of 67 months submitted
+          <span class="sep">-</span>
+          1,854 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/leon-county-sheriffs-office.html">Leon County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          13,476 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/tallahassee-community-college-pd.html">Tallahassee Community College PD</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          24 of 67 months submitted
+          <span class="sep">-</span>
+          38 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/tallahassee-police-department.html">Tallahassee Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          72,165 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-levy">
+  <details open>
+    <summary>
+      <span class="county-name">Levy County</span>
+      <span class="county-meta">2 agencies - 0 current - 6,509 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-inglis.html">FHP - Inglis</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          8 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/levy-county-sheriffs-office.html">Levy County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          6,501 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-liberty">
+  <details open>
+    <summary>
+      <span class="county-name">Liberty County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-madison">
+  <details open>
+    <summary>
+      <span class="county-name">Madison County</span>
+      <span class="county-meta">2 agencies - 1 current - 2,566 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/madison-county-sheriffs-office.html">Madison County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          52 of 67 months submitted
+          <span class="sep">-</span>
+          2,160 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/madison-police-department.html">Madison Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          20 of 67 months submitted
+          <span class="sep">-</span>
+          406 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-manatee">
+  <details open>
+    <summary>
+      <span class="county-name">Manatee County</span>
+      <span class="county-meta">4 agencies - 1 current - 21,099 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/bradenton-police-department.html">Bradenton Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          61 of 67 months submitted
+          <span class="sep">-</span>
+          16,904 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-bradenton.html">FHP - Bradenton</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          2 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/longboat-key-police-department.html">Longboat Key Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          38 of 67 months submitted
+          <span class="sep">-</span>
+          289 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/manatee-county-sheriffs-office.html">Manatee County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          15 of 67 months submitted
+          <span class="sep">-</span>
+          3,904 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-marion">
+  <details open>
+    <summary>
+      <span class="county-name">Marion County</span>
+      <span class="county-meta">4 agencies - 3 current - 95,240 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/belleview-police-department.html">Belleview Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          60 of 67 months submitted
+          <span class="sep">-</span>
+          1,970 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-ocala.html">FHP - Ocala</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          7 of 67 months submitted
+          <span class="sep">-</span>
+          38 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/marion-county-sheriffs-office.html">Marion County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          54,930 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/ocala-police-department.html">Ocala Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          38,302 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-martin">
+  <details open>
+    <summary>
+      <span class="county-name">Martin County</span>
+      <span class="county-meta">4 agencies - 2 current - 32,902 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-martin-co.html">FHP - Martin Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          17 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/martin-county-sheriffs-office.html">Martin County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          26,364 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/sewalls-point-police-department.html">Sewall's Point Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          87 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/stuart-police-department.html">Stuart Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          63 of 67 months submitted
+          <span class="sep">-</span>
+          6,434 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-miami-dade">
+  <details>
+    <summary>
+      <span class="county-name">Miami-Dade County</span>
+      <span class="county-meta">29 agencies - 20 current - 538,720 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/aventura-police-department.html">Aventura Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          11,227 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/bal-harbour-village-police-department.html">Bal Harbour Village Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          631 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/coral-gables-police-department.html">Coral Gables Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          63 of 67 months submitted
+          <span class="sep">-</span>
+          9,518 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/doral-police-department.html">Doral Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          13,863 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-miami.html">FDLE - Miami</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          3 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-miami.html">FHP - Miami</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          8 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/florida-city-police-department.html">Florida City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          46 of 67 months submitted
+          <span class="sep">-</span>
+          6,599 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/florida-international-university-pd.html">Florida International University PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          45 of 67 months submitted
+          <span class="sep">-</span>
+          1,261 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/hialeah-gardens-police-department.html">Hialeah Gardens Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          35 of 67 months submitted
+          <span class="sep">-</span>
+          1,414 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/hialeah-police-department.html">Hialeah Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          42,039 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/homestead-police-department.html">Homestead Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          47 of 67 months submitted
+          <span class="sep">-</span>
+          6,830 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/key-biscayne-police-department.html">Key Biscayne Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          54 of 67 months submitted
+          <span class="sep">-</span>
+          1,002 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/medley-police-department.html">Medley Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          12 of 67 months submitted
+          <span class="sep">-</span>
+          153 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/miami-beach-police-department.html">Miami Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          11 of 67 months submitted
+          <span class="sep">-</span>
+          10,314 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/miami-gardens-police-department.html">Miami Gardens Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          11,454 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/miami-lakes-police-department.html">Miami Lakes Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          3,357 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/miami-police-department.html">Miami Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          50 of 67 months submitted
+          <span class="sep">-</span>
+          115,539 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/miami-shores-police-department.html">Miami Shores Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          2,596 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/miami-dade-county-public-schools-pd.html">Miami-Dade County Public Schools PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          35 of 67 months submitted
+          <span class="sep">-</span>
+          1,556 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/miami-dade-police-department.html">Miami-Dade Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          196,051 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/miami-dade-sheriffs-office.html">Miami-Dade Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          19 of 67 months submitted
+          <span class="sep">-</span>
+          73,087 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/north-bay-village-police-department.html">North Bay Village Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          60 of 67 months submitted
+          <span class="sep">-</span>
+          1,043 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/north-miami-beach-police-department.html">North Miami Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          44 of 67 months submitted
+          <span class="sep">-</span>
+          11,074 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/palmetto-bay-police-department.html">Palmetto Bay Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          3,904 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/south-miami-police-department.html">South Miami Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          3,937 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sunny-isles-beach-police-department.html">Sunny Isles Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          2,764 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/town-of-cutler-bay-police-dept.html">Town of Cutler Bay Police Dept.</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          5,958 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/village-of-pinecrest-police-department.html">Village of Pinecrest Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          40 of 67 months submitted
+          <span class="sep">-</span>
+          1,311 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/west-miami-police-department.html">West Miami Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          17 of 67 months submitted
+          <span class="sep">-</span>
+          227 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-monroe">
+  <details open>
+    <summary>
+      <span class="county-name">Monroe County</span>
+      <span class="county-meta">3 agencies - 2 current - 12,860 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/key-colony-beach-police-department.html">Key Colony Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/key-west-police-department.html">Key West Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          5,273 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/monroe-county-sheriffs-office.html">Monroe County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          7,586 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-nassau">
+  <details open>
+    <summary>
+      <span class="county-name">Nassau County</span>
+      <span class="county-meta">3 agencies - 1 current - 4,959 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-nassau-co.html">FHP - Nassau Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fernandina-beach-police-department.html">Fernandina Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          36 of 67 months submitted
+          <span class="sep">-</span>
+          733 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/nassau-county-sheriffs-office.html">Nassau County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          61 of 67 months submitted
+          <span class="sep">-</span>
+          4,225 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-okaloosa">
+  <details open>
+    <summary>
+      <span class="county-name">Okaloosa County</span>
+      <span class="county-meta">6 agencies - 3 current - 10,548 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/crestview-police-department.html">Crestview Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          49 of 67 months submitted
+          <span class="sep">-</span>
+          3,196 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-crestview.html">FHP - Crestview</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          3 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fort-walton-beach-police-department.html">Fort Walton Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          63 of 67 months submitted
+          <span class="sep">-</span>
+          6,413 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/niceville-police-department.html">Niceville Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          467 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/okaloosa-county-sheriffs-office.html">Okaloosa County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          9 of 67 months submitted
+          <span class="sep">-</span>
+          410 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/valparaiso-police-department.html">Valparaiso Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          18 of 67 months submitted
+          <span class="sep">-</span>
+          59 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-okeechobee">
+  <details open>
+    <summary>
+      <span class="county-name">Okeechobee County</span>
+      <span class="county-meta">2 agencies - 0 current - 1,187 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-okeechobee-co.html">FHP - Okeechobee Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          3 of 67 months submitted
+          <span class="sep">-</span>
+          7 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/okeechobee-police-department.html">Okeechobee Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          37 of 67 months submitted
+          <span class="sep">-</span>
+          1,180 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-orange">
+  <details>
+    <summary>
+      <span class="county-name">Orange County</span>
+      <span class="county-meta">11 agencies - 9 current - 76,650 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/edgewood-police-department.html">Edgewood Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          33 of 67 months submitted
+          <span class="sep">-</span>
+          199 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fdle-orlando-ra.html">FDLE - Orlando RA</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-orlando.html">FHP - Orlando</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          10 of 67 months submitted
+          <span class="sep">-</span>
+          46 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/oakland-police-department.html">Oakland Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          9 of 67 months submitted
+          <span class="sep">-</span>
+          45 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/ocoee-police-department.html">Ocoee Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          14 of 67 months submitted
+          <span class="sep">-</span>
+          711 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/orange-county-sheriffs-office.html">Orange County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          68,434 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/orlando-police-department.html">Orlando Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          42 of 67 months submitted
+          <span class="sep">-</span>
+          5,927 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/university-of-central-florida-pd.html">University of Central Florida PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          27 of 67 months submitted
+          <span class="sep">-</span>
+          496 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/windermere-police-department.html">Windermere Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          8 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/winter-garden-police-department.html">Winter Garden Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          19 of 67 months submitted
+          <span class="sep">-</span>
+          481 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/winter-park-police-department.html">Winter Park Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          14 of 67 months submitted
+          <span class="sep">-</span>
+          302 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-osceola">
+  <details open>
+    <summary>
+      <span class="county-name">Osceola County</span>
+      <span class="county-meta">4 agencies - 3 current - 51,172 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-kissimmee.html">FHP - Kissimmee</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          16 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/kissimmee-police-department.html">Kissimmee Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          19,439 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/osceola-county-sheriffs-office.html">Osceola County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          26 of 67 months submitted
+          <span class="sep">-</span>
+          24,460 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-cloud-police-department.html">St. Cloud Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          7,257 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-palm-beach">
+  <details>
+    <summary>
+      <span class="county-name">Palm Beach County</span>
+      <span class="county-meta">16 agencies - 9 current - 110,111 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/atlantis-police-department.html">Atlantis Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          45 of 67 months submitted
+          <span class="sep">-</span>
+          204 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/boca-raton-police-department.html">Boca Raton Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          59 of 67 months submitted
+          <span class="sep">-</span>
+          17,169 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/boynton-beach-police-department.html">Boynton Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          58 of 67 months submitted
+          <span class="sep">-</span>
+          15,109 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/delray-beach-police-department.html">Delray Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          61 of 67 months submitted
+          <span class="sep">-</span>
+          12,709 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-palm-beach-turnpike-station.html">FHP - Palm Beach Turnpike Station</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          21 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/florida-atlantic-university-police-dept.html">Florida Atlantic University Police Dept</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          44 of 67 months submitted
+          <span class="sep">-</span>
+          460 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/juno-beach-police-department.html">Juno Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          51 of 67 months submitted
+          <span class="sep">-</span>
+          445 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/jupiter-inlet-colony-police-department.html">Jupiter Inlet Colony Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          6 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/jupiter-police-department.html">Jupiter Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          4,099 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/north-palm-beach-police-department.html">North Palm Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,173 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/palm-beach-county-school-district-pd.html">Palm Beach County School District PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          57 of 67 months submitted
+          <span class="sep">-</span>
+          5,906 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/palm-beach-gardens-police-department.html">Palm Beach Gardens Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          56 of 67 months submitted
+          <span class="sep">-</span>
+          8,113 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/palm-beach-police-department.html">Palm Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          56 of 67 months submitted
+          <span class="sep">-</span>
+          1,380 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/riviera-beach-police-department.html">Riviera Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          7 of 67 months submitted
+          <span class="sep">-</span>
+          1,124 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/tequesta-police-department.html">Tequesta Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          483 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/west-palm-beach-police-department.html">West Palm Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          66 of 67 months submitted
+          <span class="sep">-</span>
+          41,710 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-pasco">
+  <details open>
+    <summary>
+      <span class="county-name">Pasco County</span>
+      <span class="county-meta">6 agencies - 4 current - 70,329 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/dade-city-police-department.html">Dade City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          21 of 67 months submitted
+          <span class="sep">-</span>
+          1,042 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-pasco-co.html">FHP - Pasco Co</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          8 of 67 months submitted
+          <span class="sep">-</span>
+          41 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/new-port-richey-police-department.html">New Port Richey Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          19 of 67 months submitted
+          <span class="sep">-</span>
+          1,561 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/pasco-county-sheriffs-office.html">Pasco County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          56 of 67 months submitted
+          <span class="sep">-</span>
+          65,667 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/port-richey-police-department.html">Port Richey Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          18 of 67 months submitted
+          <span class="sep">-</span>
+          317 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/zephyrhills-police-department.html">Zephyrhills Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          30 of 67 months submitted
+          <span class="sep">-</span>
+          1,701 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-pinellas">
+  <details>
+    <summary>
+      <span class="county-name">Pinellas County</span>
+      <span class="county-meta">23 agencies - 22 current - 115,432 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/belleair-beach-police-department.html">Belleair Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          63 of 67 months submitted
+          <span class="sep">-</span>
+          259 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/belleair-bluffs-police-department.html">Belleair Bluffs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          384 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/belleair-police-department.html">Belleair Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          65 of 67 months submitted
+          <span class="sep">-</span>
+          313 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/city-of-seminole-police-department.html">City of Seminole Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          4,616 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/clearwater-police-department.html">Clearwater Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          31 of 67 months submitted
+          <span class="sep">-</span>
+          12,870 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/dunedin-police-department.html">Dunedin Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          5,389 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-pinellas-park.html">FHP - Pinellas Park</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          6 of 67 months submitted
+          <span class="sep">-</span>
+          16 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/gulfport-police-department.html">Gulfport Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          2,979 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/indian-rocks-beach-pd.html">Indian Rocks Beach PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          875 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/indian-shores-police-department.html">Indian Shores Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          308 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/kenneth-city-police-department.html">Kenneth City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,071 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/largo-police-department.html">Largo Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          21,183 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/madeira-beach-police-department.html">Madeira Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,577 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/north-redington-beach-pd.html">North Redington Beach PD</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          59 of 67 months submitted
+          <span class="sep">-</span>
+          208 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/oldsmar-police-department.html">Oldsmar Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          2,634 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/pinellas-county-sheriffs-office.html">Pinellas County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          46,086 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/redington-beaches-police-department.html">Redington Beaches Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          59 of 67 months submitted
+          <span class="sep">-</span>
+          188 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/safety-harbor-police-department.html">Safety Harbor Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          2,822 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/south-pasadena-police-department.html">South Pasadena Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,065 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-pete-beach-police-department.html">St. Pete Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          2,624 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/tarpon-springs-police-department.html">Tarpon Springs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          5,841 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/treasure-island-police-department.html">Treasure Island Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          1,954 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/univ-of-south-florida-pd-st-pete-campus.html">Univ of South Florida PD - St Pete Campus</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          41 of 67 months submitted
+          <span class="sep">-</span>
+          170 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-polk">
+  <details open>
+    <summary>
+      <span class="county-name">Polk County</span>
+      <span class="county-meta">2 agencies - 2 current - 25,647 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-lakeland.html">FHP - Lakeland</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          8 of 67 months submitted
+          <span class="sep">-</span>
+          46 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lakeland-police-department.html">Lakeland Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          25,601 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-putnam">
+  <details open>
+    <summary>
+      <span class="county-name">Putnam County</span>
+      <span class="county-meta">5 agencies - 3 current - 12,431 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/crescent-city-police-department.html">Crescent City Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          59 of 67 months submitted
+          <span class="sep">-</span>
+          380 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-palatka.html">FHP - Palatka</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          5 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/palatka-police-department.html">Palatka Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          3,873 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/putnam-county-sheriffs-office.html">Putnam County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          8,120 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/welaka-police-department.html">Welaka Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          29 of 67 months submitted
+          <span class="sep">-</span>
+          53 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-santa-rosa">
+  <details open>
+    <summary>
+      <span class="county-name">Santa Rosa County</span>
+      <span class="county-meta">3 agencies - 1 current - 24,503 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/gulf-breeze-police-department.html">Gulf Breeze Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          57 of 67 months submitted
+          <span class="sep">-</span>
+          564 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/milton-police-department.html">Milton Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          25 of 67 months submitted
+          <span class="sep">-</span>
+          339 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/santa-rosa-county-sheriffs-office.html">Santa Rosa County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          23,600 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-sarasota">
+  <details open>
+    <summary>
+      <span class="county-name">Sarasota County</span>
+      <span class="county-meta">5 agencies - 3 current - 52,710 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-venice.html">FHP - Venice</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/north-port-police-department.html">North Port Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          37 of 67 months submitted
+          <span class="sep">-</span>
+          3,281 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sarasota-county-sheriffs-office.html">Sarasota County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          40,673 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/sarasota-police-department.html">Sarasota Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          52 of 67 months submitted
+          <span class="sep">-</span>
+          8,316 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/venice-police-department.html">Venice Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          12 of 67 months submitted
+          <span class="sep">-</span>
+          439 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-seminole">
+  <details open>
+    <summary>
+      <span class="county-name">Seminole County</span>
+      <span class="county-meta">3 agencies - 2 current - 134 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-seminole-co.html">FHP - Seminole Co</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          4 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/lake-mary-police-department.html">Lake Mary Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          7 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/seminole-county-sheriffs-office.html">Seminole County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          13 of 67 months submitted
+          <span class="sep">-</span>
+          123 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-st-johns">
+  <details open>
+    <summary>
+      <span class="county-name">St. Johns County</span>
+      <span class="county-meta">4 agencies - 3 current - 18,522 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-st-augustine.html">FHP - St. Augustine</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          6 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-augustine-beach-police-department.html">St. Augustine Beach Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          38 of 67 months submitted
+          <span class="sep">-</span>
+          464 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-augustine-police-department.html">St. Augustine Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          46 of 67 months submitted
+          <span class="sep">-</span>
+          3,217 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-johns-county-sheriffs-office.html">St. Johns County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          67 of 67 months submitted
+          <span class="sep">-</span>
+          14,835 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-st-lucie">
+  <details open>
+    <summary>
+      <span class="county-name">St. Lucie County</span>
+      <span class="county-meta">4 agencies - 3 current - 27,882 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/fhp-fort-pierce.html">FHP - Fort Pierce</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          10 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fort-pierce-police-department.html">Fort Pierce Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          26 of 67 months submitted
+          <span class="sep">-</span>
+          5,812 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/port-st-lucie-police-department.html">Port St. Lucie Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          34 of 67 months submitted
+          <span class="sep">-</span>
+          12,902 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/st-lucie-county-sheriffs-office.html">St. Lucie County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          34 of 67 months submitted
+          <span class="sep">-</span>
+          9,158 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-sumter">
+  <details open>
+    <summary>
+      <span class="county-name">Sumter County</span>
+      <span class="county-meta">3 agencies - 1 current - 12,744 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-sumter-co.html">FHP - Sumter Co</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          5 of 67 months submitted
+          <span class="sep">-</span>
+          15 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/sumter-county-sheriffs-office.html">Sumter County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          64 of 67 months submitted
+          <span class="sep">-</span>
+          11,757 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/wildwood-police-department.html">Wildwood Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          32 of 67 months submitted
+          <span class="sep">-</span>
+          972 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-suwannee">
+  <details open>
+    <summary>
+      <span class="county-name">Suwannee County</span>
+      <span class="county-meta">1 agency - 1 current - 5 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/fhp-suwannee-co.html">FHP - Suwannee Co</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          4 of 67 months submitted
+          <span class="sep">-</span>
+          5 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-taylor">
+  <details open>
+    <summary>
+      <span class="county-name">Taylor County</span>
+      <span class="county-meta">2 agencies - 1 current - 3,880 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/perry-police-department.html">Perry Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          56 of 67 months submitted
+          <span class="sep">-</span>
+          2,385 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/taylor-county-sheriffs-office.html">Taylor County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          54 of 67 months submitted
+          <span class="sep">-</span>
+          1,495 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-union">
+  <details open>
+    <summary>
+      <span class="county-name">Union County</span>
+      <span class="county-meta">No FIBRS-reporting agencies found in this dataset</span>
+    </summary>
+  </details>
+</section>
+<section class="county-group" id="county-volusia">
+  <details open>
+    <summary>
+      <span class="county-name">Volusia County</span>
+      <span class="county-meta">5 agencies - 0 current - 9 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/city-of-debary.html">City of Debary</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          2 of 67 months submitted
+          <span class="sep">-</span>
+          5 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/city-of-deltona.html">City of Deltona</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/city-of-pierson.html">City of Pierson</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/oak-hill-police-department.html">Oak Hill Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/volusia-county-sheriffs-office.html">Volusia County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          1 of 67 months submitted
+          <span class="sep">-</span>
+          1 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-wakulla">
+  <details open>
+    <summary>
+      <span class="county-name">Wakulla County</span>
+      <span class="county-meta">1 agency - 1 current - 2,435 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/wakulla-county-sheriffs-office.html">Wakulla County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          48 of 67 months submitted
+          <span class="sep">-</span>
+          2,435 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-walton">
+  <details open>
+    <summary>
+      <span class="county-name">Walton County</span>
+      <span class="county-meta">2 agencies - 2 current - 9,463 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/defuniak-springs-police-department.html">DeFuniak Springs Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          33 of 67 months submitted
+          <span class="sep">-</span>
+          1,024 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/walton-county-sheriffs-office.html">Walton County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          55 of 67 months submitted
+          <span class="sep">-</span>
+          8,439 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+<section class="county-group" id="county-washington">
+  <details open>
+    <summary>
+      <span class="county-name">Washington County</span>
+      <span class="county-meta">2 agencies - 1 current - 2,241 offenses all-time</span>
+    </summary>
+    <div class="agency-list">
+      <div class="agency-row">
+        <span class="status-dot stale" title="Not current"></span>
+        <a class="agency-name" href="agencies/chipley-police-department.html">Chipley Police Department</a>
+        <span class="agency-stats">
+          <span class="status-label stale">Not current</span>
+          <span class="sep">-</span>
+          43 of 67 months submitted
+          <span class="sep">-</span>
+          356 offenses
+        </span>
+      </div>
+      <div class="agency-row">
+        <span class="status-dot current" title="Current"></span>
+        <a class="agency-name" href="agencies/washington-county-sheriffs-office.html">Washington County Sheriff's Office</a>
+        <span class="agency-stats">
+          <span class="status-label current">Current</span>
+          <span class="sep">-</span>
+          61 of 67 months submitted
+          <span class="sep">-</span>
+          1,885 offenses
+        </span>
+      </div>
+    </div>
+  </details>
+</section>
+  </div>
+</div>
+
+<nav class="alpha-nav" id="alphaNav" aria-label="Jump to county"></nav>
+
+<script>
+// ---- sticky A-Z nav (by county) ----
+const groups = Array.from(document.querySelectorAll('.county-group'));
+const lettersPresent = new Set(groups.map(g => g.querySelector('.county-name').textContent.trim()[0].toUpperCase()));
+
+const alphaNav = document.getElementById('alphaNav');
+const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+alphabet.forEach(letter => {
+  const btn = document.createElement('button');
+  btn.textContent = letter;
+  if(lettersPresent.has(letter)){
+    btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      const target = groups.find(g => g.querySelector('.county-name').textContent.trim()[0].toUpperCase() === letter);
+      if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+  alphaNav.appendChild(btn);
+});
+
+function updateCurrentLetter(){
+  let current = null;
+  for(const g of groups){
+    if(g.getBoundingClientRect().top <= 80){
+      current = g;
+    } else {
+      break;
+    }
+  }
+  alphaNav.querySelectorAll('button').forEach(b => b.classList.remove('current'));
+  if(current){
+    const letter = current.querySelector('.county-name').textContent.trim()[0].toUpperCase();
+    const idx = alphabet.indexOf(letter);
+    if(idx >= 0) alphaNav.children[idx].classList.add('current');
+  }
+}
+document.addEventListener('scroll', updateCurrentLetter, {passive:true});
+updateCurrentLetter();
+
+// ---- search / filter ----
+const searchBox = document.getElementById('searchBox');
+const searchCount = document.getElementById('searchCount');
+const allRows = Array.from(document.querySelectorAll('.agency-row'));
+
+searchBox.addEventListener('input', () => {
+  const q = searchBox.value.trim().toLowerCase();
+
+  if(q === ''){
+    groups.forEach(g => {
+      g.classList.remove('hidden');
+      const d = g.querySelector('details');
+      if(d && d.dataset.wasOpen === 'true') d.open = true;
+    });
+    allRows.forEach(r => r.classList.remove('hidden'));
+    searchCount.textContent = '';
+    return;
+  }
+
+  let visibleCount = 0;
+  groups.forEach(g => {
+    const countyName = g.querySelector('.county-name').textContent.toLowerCase();
+    const rows = Array.from(g.querySelectorAll('.agency-row'));
+    const countyMatches = countyName.includes(q);
+    let anyRowMatches = false;
+
+    rows.forEach(r => {
+      const name = r.querySelector('.agency-name').textContent.toLowerCase();
+      const match = countyMatches || name.includes(q);
+      r.classList.toggle('hidden', !match);
+      if(match){ anyRowMatches = true; visibleCount++; }
+    });
+
+    const groupVisible = countyMatches || anyRowMatches;
+    g.classList.toggle('hidden', !groupVisible);
+
+    const d = g.querySelector('details');
+    if(d && groupVisible){
+      if(d.dataset.wasOpen === undefined) d.dataset.wasOpen = String(d.open);
+      d.open = true;
+    } else if(d && d.dataset.wasOpen !== undefined){
+      d.open = d.dataset.wasOpen === 'true';
+    }
+  });
+
+  searchCount.textContent = `${visibleCount} agenc${visibleCount === 1 ? 'y' : 'ies'} match`;
+});
+</script>
+</body>
+</html>
