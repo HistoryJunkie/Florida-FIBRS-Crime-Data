@@ -1,1 +1,17 @@
+# Python virtual environment
 venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Pipeline logs (local operational output, not site content)
+logs/
+
+# Downloaded raw FDLE snapshots - commented out by default.
+# Uncomment if you don't want every monthly .xlsx bloating the repo.
+# data/raw/*.xlsx
+
+# OS junk
+.DS_Store
+Thumbs.db
