@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>About This Data - Florida FIBRS Crime Data</title>
+<style>
+  :root{
+    --bg:#0d1117;
+    --panel:#161b22;
+    --border:#30363d;
+    --text:#c9d1d9;
+    --muted:#8b949e;
+    --accent:#58a6ff;
+    --good:#39d353;
+    --bad:#f85149;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    padding:clamp(20px,4vw,40px) clamp(16px,4vw,24px);
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+  }
+  .nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:28px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--border);
+  }
+  .nav .site-name{
+    font-size:13px;
+    font-weight:600;
+    color:var(--muted);
+  }
+  .nav a{
+    color:var(--accent);
+    text-decoration:none;
+    font-size:13px;
+    font-weight:600;
+    border:1px solid var(--border);
+    padding:6px 12px;
+    border-radius:6px;
+  }
+  .nav a:hover{
+    background:rgba(88,166,255,0.1);
+  }
+  h1{
+    font-size:clamp(20px,4.5vw,26px);
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .subtitle{
+    color:var(--muted);
+    font-size:14px;
+    margin:0 0 32px;
+  }
+  h2{
+    font-size:16px;
+    font-weight:700;
+    color:var(--accent);
+    margin:36px 0 12px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+  }
+  p{
+    font-size:14px;
+    line-height:1.65;
+    margin:0 0 14px;
+  }
+  ul{
+    margin:0 0 14px;
+    padding-left:22px;
+  }
+  li{
+    font-size:14px;
+    line-height:1.65;
+    margin-bottom:10px;
+  }
+  strong{
+    color:#fff;
+  }
+  code{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:2px 6px;
+    font-size:12.5px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  a.inline-link{
+    color:var(--accent);
+    text-decoration:none;
+    word-break:break-word;
+  }
+  a.inline-link:hover{
+    text-decoration:underline;
+  }
+  .callout{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:16px 18px;
+    margin:0 0 14px;
+  }
+  .callout p{margin:0;}
+  .callout p + p{margin-top:10px;}
+  .warning{
+    background:rgba(248,81,73,0.08);
+    border:1px solid rgba(248,81,73,0.35);
+    border-radius:6px;
+    padding:16px 18px;
+    margin:0 0 14px;
+  }
+  .warning p{margin:0;}
+  .warning p + p{margin-top:10px;}
+  .status-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    font-size:11.5px;
+    font-weight:600;
+    padding:2px 9px;
+    border-radius:999px;
+    border:1px solid var(--border);
+  }
+  .status-pill .dot{width:7px;height:7px;border-radius:50%;}
+  .status-pill.current{color:var(--good);}
+  .status-pill.current .dot{background:var(--good);}
+  .status-pill.stale{color:var(--bad);}
+  .status-pill.stale .dot{background:var(--bad);}
+  .footer-link{
+    margin-top:44px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    text-align:center;
+  }
+  .footer-link a{
+    color:var(--accent);
+    text-decoration:none;
+    font-size:14px;
+    font-weight:600;
+  }
+  .footer-link a:hover{
+    text-decoration:underline;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="nav">
+    <span class="site-name">Florida FIBRS Crime Data</span>
+    <a href="index.html">View All Agencies</a>
+  </div>
+
+  <h1>About This Data</h1>
+  <p class="subtitle">What this site shows, where the numbers come from, and what to watch out for.</p>
+
+  <h2>What this shows</h2>
+  <p>This site lists every Florida county and every law enforcement agency within it that appears in FDLE's FIBRS export - sheriff's offices, city and town police departments, university and school police, state agencies, everyone. For each agency you'll see:</p>
+  <ul>
+    <li>A <span class="status-pill current"><span class="dot"></span>Current</span> or <span class="status-pill stale"><span class="dot"></span>Not current</span> flag - whether the agency has a real submission for the most recent month in the dataset</li>
+    <li>How many months out of the total window (January 2021 through the dataset's latest month) the agency has actually submitted data for</li>
+    <li>A total offense count</li>
+  </ul>
+  <p>Clicking into an agency shows a monthly heatmap, a trend chart over time, and a breakdown by offense category (assault, larceny, drug offenses, and so on).</p>
+  <p>Counties with no matching agency anywhere in the dataset are shown with a "Not Found in FIBRS Dataset" badge - see the caveats section below for what that likely means.</p>
+
+  <h2>Where the data comes from</h2>
+  <p>The source is the Florida Department of Law Enforcement's Criminal Justice Analytics Bureau, specifically their FIBRS Offense dashboard and downloadable Excel reports:</p>
+  <p><a class="inline-link" href="https://www.fdle.state.fl.us/cjab/fibrs" target="_blank" rel="noopener">https://www.fdle.state.fl.us/cjab/fibrs</a></p>
+  <p>A few relevant facts about the underlying program, from FDLE's own documentation:</p>
+  <ul>
+    <li>FIBRS (Florida Incident-Based Reporting System) is Florida's implementation of the FBI's National Incident-Based Reporting System (NIBRS). The FBI mandated the shift away from the old summary-based reporting method, and the FBI's UCR Program stopped accepting summary-format data starting January 1, 2021 - which is why that's the starting point for this dataset.</li>
+    <li>Reporting is not optional. Florida Administrative Code Rule 11C-4.010 requires all state, county, and municipal law enforcement agencies to submit incident-based crime data to FDLE. That rule took effect in July 2022, after FIBRS's initial rollout began, and has applied for the bulk of the period this site covers.</li>
+    <li>Unlike the old summary system, FIBRS captures every offense connected to an incident rather than just the single most serious one, and agencies submit monthly instead of twice a year.</li>
+    <li>FDLE's own dashboard describes its offense totals as Group A offenses that became known to law enforcement, submitted and verified by each agency, categorized by incident date.</li>
+  </ul>
+
+  <h2>How a month counts as "submitted"</h2>
+  <p>A month is only counted as submitted if that agency's summed offense total for the month is greater than zero. A month that comes back from FDLE as unavailable, and a month that literally sums to zero, are both treated as <strong>not submitted</strong> - not as "zero crime."</p>
+  <p>That's a deliberate choice, not an oversight: a genuine total of zero Group A offenses, across dozens of offense categories, for an entire jurisdiction, for a full month, is implausible for any agency serving a real population. A broken or incomplete data feed is a far more likely explanation than a crime-free month.</p>
+
+  <h2>Known issues with the underlying data - read this before drawing conclusions</h2>
+  <div class="warning">
+    <p><strong>Low, zero, or missing months usually mean a reporting problem, not a safe month.</strong> If an agency's page shows a blank or striped stretch, or a month with an unusually low count, the far more likely explanation is that their FIBRS data feed wasn't working correctly during that period - not that crime actually dropped.</p>
+    <p><strong>The reverse is also true.</strong> If an agency's numbers suddenly jump up to a normal-looking level after a long stretch of low or missing data, that's more consistent with their reporting integration getting fixed than with an actual crime spike. Treat sudden discontinuities as signals about data quality first, actual trends second.</p>
+  </div>
+  <p>More broadly, this is a young, still-maturing dataset:</p>
+  <ul>
+    <li>FIBRS is a relatively new system. Florida agencies have been transitioning onto it since 2021, and standing it up requires each individual agency to update its own records-management system and establish a data feed to FDLE - a technical and administrative lift that has clearly moved at very different speeds across the state.</li>
+    <li>A large share of agencies in this dataset show partial history, long gaps, or stopped submitting entirely partway through - consistent with an ongoing statewide integration and onboarding process, not an issue specific to any single agency.</li>
+    <li>Some counties have no matching agency anywhere in the dataset at all. That doesn't mean no law enforcement exists there - it likely reflects where that county's agency stands in FDLE's onboarding process, or that a different agency is the primary submitter for offenses in that county.</li>
+  </ul>
+  <p>None of this makes the data useless - it's the same data FDLE and the FBI both work with - but the gaps and low points are informative about reporting infrastructure first, and about actual crime trends only once you've accounted for that.</p>
+
+  <h2>Caveats</h2>
+  <div class="callout">
+    <p>This site reflects a snapshot of FDLE's published export as of whenever it was last updated - not a live feed. If FDLE revises past data, this site won't reflect that until it's refreshed again.</p>
+    <p>FIBRS counts offenses, not incidents or arrests - a single incident can produce multiple offense counts, per FDLE's own methodology.</p>
+  </div>
+
+  <div class="footer-link">
+    <a href="index.html">Back to all agencies</a>
+  </div>
+
+</div>
+</body>
+</html>
