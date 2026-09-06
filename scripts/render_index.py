@@ -34,10 +34,6 @@ ALL_FLORIDA_COUNTIES = [
     "Volusia", "Wakulla", "Walton", "Washington",
 ]
 
-# Counties with more than this many agencies are collapsed by default so
-# the page doesn't open with a huge wall of rows for Miami-Dade, Pinellas, etc.
-COLLAPSE_THRESHOLD = 6
-
 AGENCIES_DIR = "agencies"  # detail pages live in this subfolder, sibling to index.html
 
 
@@ -79,17 +75,14 @@ def render_county_section(county, county_data):
 
     if count == 0:
         return f"""<section class="county-group no-data" id="county-{slug}">
-  <details open>
-    <summary class="no-data-summary">
-      <span class="county-name">{county} County</span>
-      <span class="not-found-badge">Not Found in FIBRS Dataset</span>
-    </summary>
-  </details>
+  <div class="county-header no-data-header">
+    <span class="county-name">{county} County</span>
+    <span class="not-found-badge">Not Found in FIBRS Dataset</span>
+  </div>
 </section>"""
 
     current_count = sum(1 for a in agencies.values() if a["current"])
     total_offenses = sum(a["total_offenses"] for a in agencies.values())
-    details_attrs = " open" if count <= COLLAPSE_THRESHOLD else ""
 
     rows = "\n".join(
         render_agency_row(name, info)
@@ -97,15 +90,13 @@ def render_county_section(county, county_data):
     )
 
     return f"""<section class="county-group" id="county-{slug}">
-  <details{details_attrs}>
-    <summary>
-      <span class="county-name">{county} County</span>
-      <span class="county-meta">{count} agenc{"y" if count == 1 else "ies"} - {current_count} current - {total_offenses:,} offenses all-time</span>
-    </summary>
-    <div class="agency-list">
+  <div class="county-header">
+    <span class="county-name">{county} County</span>
+    <span class="county-meta">{count} agenc{"y" if count == 1 else "ies"} - {current_count} current - {total_offenses:,} offenses all-time</span>
+  </div>
+  <div class="agency-list">
 {rows}
-    </div>
-  </details>
+  </div>
 </section>"""
 
 
@@ -186,14 +177,12 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
   .search-count{font-size:11px;color:var(--muted);margin-top:6px;}
 
   .county-group{scroll-margin-top:16px;margin-bottom:10px;}
-  .county-group details{
+  .county-group{
     background:var(--panel);
     border:1px solid var(--border);
     border-radius:6px;
   }
-  .county-group summary{
-    cursor:pointer;
-    list-style:none;
+  .county-header{
     padding:14px 18px;
     display:flex;
     justify-content:space-between;
@@ -201,21 +190,10 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     flex-wrap:wrap;
     gap:6px 14px;
   }
-  .county-group summary::-webkit-details-marker{display:none;}
-  .county-group summary::before{
-    content:">";
-    display:inline-block;
-    margin-right:8px;
-    color:var(--muted);
-    transition:transform 0.15s ease;
-  }
-  .county-group details[open] summary::before{
-    transform:rotate(90deg);
-  }
   .county-name{font-size:14.5px;font-weight:700;color:var(--text);}
   .county-meta{font-size:11.5px;color:var(--muted);}
 
-  .county-group.no-data details{
+  .county-group.no-data{
     border-color:rgba(248,81,73,0.4);
     background:rgba(248,81,73,0.05);
   }
@@ -373,11 +351,7 @@ searchBox.addEventListener('input', () => {
   const q = searchBox.value.trim().toLowerCase();
 
   if(q === ''){
-    groups.forEach(g => {
-      g.classList.remove('hidden');
-      const d = g.querySelector('details');
-      if(d && d.dataset.wasOpen === 'true') d.open = true;
-    });
+    groups.forEach(g => g.classList.remove('hidden'));
     allRows.forEach(r => r.classList.remove('hidden'));
     searchCount.textContent = '';
     return;
@@ -399,14 +373,6 @@ searchBox.addEventListener('input', () => {
 
     const groupVisible = countyMatches || anyRowMatches;
     g.classList.toggle('hidden', !groupVisible);
-
-    const d = g.querySelector('details');
-    if(d && groupVisible){
-      if(d.dataset.wasOpen === undefined) d.dataset.wasOpen = String(d.open);
-      d.open = true;
-    } else if(d && d.dataset.wasOpen !== undefined){
-      d.open = d.dataset.wasOpen === 'true';
-    }
   });
 
   searchCount.textContent = `${visibleCount} agenc${visibleCount === 1 ? 'y' : 'ies'} match`;
