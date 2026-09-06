@@ -222,7 +222,7 @@
   <div class="section">
     <h2 id="trendHeading">Trend Over Time</h2>
     <div id="trendChart"></div>
-    <p class="trend-caption" id="trendCaption">Total offenses reported per month, chronologically. Gaps indicate not submitted or not yet published.</p>
+    <p class="trend-caption" id="trendCaption">Total offenses reported per year. Striped = partial or in-progress year. Gray = no submitted data that year.</p>
   </div>
 
   <div class="section">
@@ -300,66 +300,90 @@ years.forEach(year => {
   rows.appendChild(row);
 });
 
-const chartW = 800, chartH = 220;
+const chartW = 800, chartH = 260;
 const padL = 36, padR = 12, padT = 12, padB = 24;
 const plotW = chartW - padL - padR;
 const plotH = chartH - padT - padB;
 
 function renderTrendAllTime(){
-  const flatValues = [];
-  years.forEach(y => grid[y].forEach(v => flatValues.push(v)));
-  const submittedValues = flatValues.filter(v => v !== null && v > 0);
-  const localMax = Math.max(...submittedValues);
-  const n = flatValues.length;
+  const barPadT = 28, barPadB = 44;
+  const barPlotH = chartH - barPadT - barPadB;
+  const barGap = 20;
+  const barW = (plotW - barGap * (years.length - 1)) / years.length;
+  const MIN_BAR_PX = 5;
 
-  function xFor(i){ return padL + (i / (n - 1)) * plotW; }
-  function yFor(v){ return padT + plotH - ((v - 0) / (localMax - 0)) * plotH; }
-
-  let pathParts = [];
-  let segmentOpen = false;
-  let points = [];
-  let flatIdx = 0;
-  years.forEach(year => {
-    grid[year].forEach((v, i) => {
-      const x = xFor(flatIdx);
-      if(v === null || v === 0){
-        segmentOpen = false;
-      } else {
-        const y = yFor(v);
-        points.push({x, y, label: `${months[i]} ${year}`, value: v});
-        if(!segmentOpen){
-          pathParts.push(`M ${x.toFixed(1)} ${y.toFixed(1)}`);
-          segmentOpen = true;
-        } else {
-          pathParts.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
-        }
-      }
-      flatIdx++;
-    });
+  const yearInfo = years.map(year => {
+    const rowValues = grid[year];
+    const known = rowValues.filter(v => v !== null).length;
+    const submitted = rowValues.filter(v => v !== null && v > 0).length;
+    const total = rowValues.reduce((s, v) => s + (v || 0), 0);
+    return {year, known, submitted, total};
   });
 
-  const yTicks = [0, Math.round(localMax/2), localMax];
+  const maxTotal = Math.max(...yearInfo.map(y => y.total), 1);
+
+  function heightFor(total){
+    if(total <= 0) return 0;
+    return Math.max(MIN_BAR_PX, (total / maxTotal) * barPlotH);
+  }
+
+  const yTicks = [0, Math.round(maxTotal/2), maxTotal];
   const yTickEls = yTicks.map(t => {
-    const y = yFor(t);
+    const y = barPadT + barPlotH - (t / maxTotal) * barPlotH;
     return `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
-            <text x="${padL-8}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${t}</text>`;
+            <text x="${padL-8}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${t.toLocaleString()}</text>`;
   }).join('');
 
-  const yearTickEls = years.map((y, idx) => {
-    const x = xFor(idx * 12);
-    return `<text x="${x}" y="${chartH-6}" fill="#8b949e" font-size="10" text-anchor="start">${y}</text>`;
-  }).join('');
+  const barEls = yearInfo.map((info, i) => {
+    const x = padL + i * (barW + barGap);
+    const centerX = x + barW / 2;
 
-  const dotEls = points.map(p =>
-    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="#39d353"><title>${p.label}: ${p.value} offenses</title></circle>`
-  ).join('');
+    let h, fillAttr, labelTop, labelSub, subColor;
+    if(info.submitted === 0){
+      h = MIN_BAR_PX;
+      fillAttr = 'fill="#21262d"';
+      labelTop = null;
+      labelSub = 'no data';
+      subColor = '#8b949e';
+    } else {
+      h = heightFor(info.total);
+      const isFullYear = info.known === 12 && info.submitted === 12;
+      fillAttr = isFullYear ? 'fill="#39d353"' : 'fill="url(#allTimeStripe)"';
+      labelTop = info.total.toLocaleString();
+      if(isFullYear){
+        labelSub = null;
+      } else if(info.known < 12){
+        labelSub = `${info.submitted} of ${info.known} mo. so far`;
+        subColor = '#f85149';
+      } else {
+        labelSub = `${info.submitted} of 12 mo.`;
+        subColor = '#f85149';
+      }
+    }
+
+    const y = barPadT + barPlotH - h;
+    const tooltip = `${info.year}: ${info.total.toLocaleString()} offenses (${info.submitted} of ${info.known} months submitted)`;
+    let svg = `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" ${fillAttr}><title>${tooltip}</title></rect>`;
+    if(labelTop){
+      svg += `<text x="${centerX.toFixed(1)}" y="${(y-8).toFixed(1)}" fill="#c9d1d9" font-size="12" text-anchor="middle">${labelTop}</text>`;
+    }
+    svg += `<text x="${centerX.toFixed(1)}" y="${(barPadT+barPlotH+20).toFixed(1)}" fill="#c9d1d9" font-size="12" text-anchor="middle">${info.year}</text>`;
+    if(labelSub){
+      svg += `<text x="${centerX.toFixed(1)}" y="${(barPadT+barPlotH+34).toFixed(1)}" fill="${subColor}" font-size="10" text-anchor="middle">${labelSub}</text>`;
+    }
+    return svg;
+  }).join('');
 
   document.getElementById('trendChart').innerHTML = `
     <svg class="trend-svg" viewBox="0 0 ${chartW} ${chartH}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="allTimeStripe" width="8" height="8" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+          <rect width="8" height="8" fill="#0e4429"/>
+          <rect width="4" height="8" fill="#39d353"/>
+        </pattern>
+      </defs>
       ${yTickEls}
-      ${yearTickEls}
-      <path d="${pathParts.join(' ')}" fill="none" stroke="#39d353" stroke-width="2"/>
-      ${dotEls}
+      ${barEls}
     </svg>`;
 }
 
@@ -483,7 +507,7 @@ function applyYearFilter(year){
 
   if(year === 'all'){
     trendHeading.textContent = 'Trend Over Time';
-    trendCaption.textContent = 'Total offenses reported per month, chronologically. Gaps indicate not submitted or not yet published.';
+    trendCaption.textContent = 'Total offenses reported per year. Striped = partial or in-progress year. Gray = no submitted data that year.';
     renderTrendAllTime();
     if(offenseHeading){
       offenseHeading.textContent = 'Offense Type Breakdown';
