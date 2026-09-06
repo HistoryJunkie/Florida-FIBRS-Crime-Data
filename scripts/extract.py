@@ -25,6 +25,9 @@ DEFINITIONS
     judged against, e.g. "55 of 67 months submitted."
   - An agency is "current" if it has a real (nonzero) submission for the
     dataset's most recent month.
+  - Offense-type breakdowns are tracked both all-time and per calendar
+    year, so downstream pages can offer a year filter on top of the
+    all-time view.
 """
 
 import argparse
@@ -117,7 +120,10 @@ def extract(xlsx_path: Path):
                 "county": county,
                 "monthly": [0] * total_months,
                 "offense_types": {},
+                "offense_types_by_year": {},
             })
+
+            year_bucket = rec["offense_types_by_year"].setdefault(str(sheet_year), {})
 
             for m in range(12):
                 label = f"{sheet_year}-{m+1:02d}"
@@ -133,6 +139,7 @@ def extract(xlsx_path: Path):
                     rec["offense_types"][offense_name] = (
                         rec["offense_types"].get(offense_name, 0) + int(val)
                     )
+                    year_bucket[offense_name] = year_bucket.get(offense_name, 0) + int(val)
                 rec["monthly"][idx] += int(month_total)
 
     # ---- derive per-agency summary fields ----
@@ -143,6 +150,10 @@ def extract(xlsx_path: Path):
         current = monthly[-1] > 0
         total_offenses = sum(monthly)
         offense_types = {k: v for k, v in rec["offense_types"].items() if v > 0}
+        offense_types_by_year = {
+            year: {k: v for k, v in types.items() if v > 0}
+            for year, types in rec["offense_types_by_year"].items()
+        }
 
         county_bucket = counties.setdefault(rec["county"], {"agencies": {}})
         county_bucket["agencies"][agency] = {
@@ -152,6 +163,7 @@ def extract(xlsx_path: Path):
             "current": current,
             "total_offenses": total_offenses,
             "offense_types": offense_types,
+            "offense_types_by_year": offense_types_by_year,
         }
 
     return {

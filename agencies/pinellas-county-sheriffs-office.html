@@ -111,6 +111,39 @@
   .offense-table td{padding:7px 8px;border-bottom:1px solid #21262d;}
   .offense-table td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--text);}
   .offense-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+  .year-filter{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:18px;
+  }
+  .year-filter button{
+    appearance:none;
+    font-family:inherit;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--muted);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 14px;
+    cursor:pointer;
+    transition:background 0.12s ease,color 0.12s ease,border-color 0.12s ease;
+  }
+  .year-filter button:hover:not(:disabled){
+    border-color:var(--accent);
+    color:var(--text);
+  }
+  .year-filter button.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#0d1117;
+  }
+  .year-filter button:disabled{
+    opacity:0.35;
+    cursor:not-allowed;
+  }
 </style>
 </head>
 <body>
@@ -184,17 +217,19 @@
     </div>
   </div>
 
+  <div class="year-filter" id="yearFilter"></div>
+
   <div class="section">
-    <h2>Trend Over Time</h2>
+    <h2 id="trendHeading">Trend Over Time</h2>
     <div id="trendChart"></div>
-    <p class="trend-caption">Total offenses reported per month, chronologically. Gaps indicate not submitted or not yet published.</p>
+    <p class="trend-caption" id="trendCaption">Total offenses reported per month, chronologically. Gaps indicate not submitted or not yet published.</p>
   </div>
 
   <div class="section">
-    <h2>Offense Type Breakdown</h2>
-    <p class="trend-caption" style="margin-top:0;margin-bottom:16px;">All-time totals by offense category.</p>
+    <h2 id="offenseHeading">Offense Type Breakdown</h2>
+    <p class="trend-caption" id="offenseCaption" style="margin-top:0;margin-bottom:16px;">All-time totals by offense category.</p>
     <div id="offenseTop"></div>
-    <details class="offense-more">
+    <details class="offense-more" id="offenseMoreDetails">
       <summary>Show all offense types</summary>
       <table class="offense-table">
         <thead>
@@ -269,18 +304,85 @@ const chartW = 800, chartH = 220;
 const padL = 36, padR = 12, padT = 12, padB = 24;
 const plotW = chartW - padL - padR;
 const plotH = chartH - padT - padB;
-const n = flatValues.length;
 
-function xFor(i){ return padL + (i / (n - 1)) * plotW; }
-function yFor(v){ return padT + plotH - ((v - 0) / (max - 0)) * plotH; }
+function renderTrendAllTime(){
+  const flatValues = [];
+  years.forEach(y => grid[y].forEach(v => flatValues.push(v)));
+  const submittedValues = flatValues.filter(v => v !== null && v > 0);
+  const localMax = Math.max(...submittedValues);
+  const n = flatValues.length;
 
-let pathParts = [];
-let segmentOpen = false;
-let points = [];
-let flatIdx = 0;
-years.forEach(year => {
-  grid[year].forEach((v, i) => {
-    const x = xFor(flatIdx);
+  function xFor(i){ return padL + (i / (n - 1)) * plotW; }
+  function yFor(v){ return padT + plotH - ((v - 0) / (localMax - 0)) * plotH; }
+
+  let pathParts = [];
+  let segmentOpen = false;
+  let points = [];
+  let flatIdx = 0;
+  years.forEach(year => {
+    grid[year].forEach((v, i) => {
+      const x = xFor(flatIdx);
+      if(v === null || v === 0){
+        segmentOpen = false;
+      } else {
+        const y = yFor(v);
+        points.push({x, y, label: `${months[i]} ${year}`, value: v});
+        if(!segmentOpen){
+          pathParts.push(`M ${x.toFixed(1)} ${y.toFixed(1)}`);
+          segmentOpen = true;
+        } else {
+          pathParts.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
+        }
+      }
+      flatIdx++;
+    });
+  });
+
+  const yTicks = [0, Math.round(localMax/2), localMax];
+  const yTickEls = yTicks.map(t => {
+    const y = yFor(t);
+    return `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
+            <text x="${padL-8}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${t}</text>`;
+  }).join('');
+
+  const yearTickEls = years.map((y, idx) => {
+    const x = xFor(idx * 12);
+    return `<text x="${x}" y="${chartH-6}" fill="#8b949e" font-size="10" text-anchor="start">${y}</text>`;
+  }).join('');
+
+  const dotEls = points.map(p =>
+    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="#39d353"><title>${p.label}: ${p.value} offenses</title></circle>`
+  ).join('');
+
+  document.getElementById('trendChart').innerHTML = `
+    <svg class="trend-svg" viewBox="0 0 ${chartW} ${chartH}" xmlns="http://www.w3.org/2000/svg">
+      ${yTickEls}
+      ${yearTickEls}
+      <path d="${pathParts.join(' ')}" fill="none" stroke="#39d353" stroke-width="2"/>
+      ${dotEls}
+    </svg>`;
+}
+
+function renderTrendForYear(year){
+  const rowValues = grid[year];
+  const submittedValues = rowValues.filter(v => v !== null && v > 0);
+
+  if(submittedValues.length === 0){
+    document.getElementById('trendChart').innerHTML =
+      `<p class="trend-caption" style="margin:0;">No submitted data for ${year}.</p>`;
+    return;
+  }
+
+  const localMax = Math.max(...submittedValues);
+  const n = 12;
+  function xFor(i){ return padL + (i / (n - 1)) * plotW; }
+  function yFor(v){ return padT + plotH - ((v - 0) / (localMax - 0)) * plotH; }
+
+  let pathParts = [];
+  let segmentOpen = false;
+  let points = [];
+  rowValues.forEach((v, i) => {
+    const x = xFor(i);
     if(v === null || v === 0){
       segmentOpen = false;
     } else {
@@ -293,46 +395,58 @@ years.forEach(year => {
         pathParts.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
       }
     }
-    flatIdx++;
   });
-});
-const pathD = pathParts.join(' ');
 
-const yTicks = [0, Math.round(max/2), max];
-const yTickEls = yTicks.map(t => {
-  const y = yFor(t);
-  return `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
-          <text x="${padL-8}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${t}</text>`;
-}).join('');
+  const yTicks = [0, Math.round(localMax/2), localMax];
+  const yTickEls = yTicks.map(t => {
+    const y = yFor(t);
+    return `<line x1="${padL}" y1="${y}" x2="${chartW-padR}" y2="${y}" stroke="#30363d" stroke-width="1" stroke-dasharray="2,3"/>
+            <text x="${padL-8}" y="${y+4}" fill="#8b949e" font-size="10" text-anchor="end">${t}</text>`;
+  }).join('');
 
-const yearTickEls = years.map((y, idx) => {
-  const x = xFor(idx * 12);
-  return `<text x="${x}" y="${chartH-6}" fill="#8b949e" font-size="10" text-anchor="start">${y}</text>`;
-}).join('');
+  const monthTickEls = months.map((m, idx) => {
+    const x = xFor(idx);
+    return `<text x="${x}" y="${chartH-6}" fill="#8b949e" font-size="10" text-anchor="middle">${m}</text>`;
+  }).join('');
 
-const dotEls = points.map(p =>
-  `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="#39d353"><title>${p.label}: ${p.value} offenses</title></circle>`
-).join('');
+  const dotEls = points.map(p =>
+    `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="#39d353"><title>${p.label}: ${p.value} offenses</title></circle>`
+  ).join('');
 
-document.getElementById('trendChart').innerHTML = `
-  <svg class="trend-svg" viewBox="0 0 ${chartW} ${chartH}" xmlns="http://www.w3.org/2000/svg">
-    ${yTickEls}
-    ${yearTickEls}
-    <path d="${pathD}" fill="none" stroke="#39d353" stroke-width="2"/>
-    ${dotEls}
-  </svg>`;
+  document.getElementById('trendChart').innerHTML = `
+    <svg class="trend-svg" viewBox="0 0 ${chartW} ${chartH}" xmlns="http://www.w3.org/2000/svg">
+      ${yTickEls}
+      ${monthTickEls}
+      <path d="${pathParts.join(' ')}" fill="none" stroke="#39d353" stroke-width="2"/>
+      ${dotEls}
+    </svg>`;
+}
 
-const offenseTotals = {"Murder and Non-Negligent Manslaughter": 30, "Forcible Sex Offenses": 523, "Robbery": 221, "Aggravated Assault": 1720, "Burglary": 1762, "Larceny - Pocket Picking": 18, "Larceny - Purse Snatching": 5, "Larceny - Shoplifting": 1395, "Larceny - From Motor Vehicle": 3389, "Larceny - Motor Vehicle Parts": 846, "Larceny - From Building": 1258, "Larceny - Coin-Operated Machine": 6, "Larceny - All Other": 3473, "Motor Vehicle Theft": 1469, "Negligent Manslaughter": 2, "Arson": 42, "Simple Assault": 10206, "Stalking": 154, "Intimidation": 1024, "Kidnapping/Abduction": 113, "Drug Offenses": 8022, "Embezzlement": 114, "Fraud": 5907, "Counterfeiting/Forgery": 695, "Extortion/Blackmail": 118, "Prostitutition": 12, "Non-Forcible Sex Offenses": 390, "Stolen Property Offenses": 219, "Destruction/Damage/Vandalism": 511, "Gambling Offenses": 33, "Weapons Offenses": 756, "Identity Theft": 1551, "Hacking/Computer Invasion": 15, "Human Trafficking - Commercial Sex Acts": 11, "Animal Cruelty": 76};
-const offenseEntries = Object.entries(offenseTotals).sort((a,b) => b[1]-a[1]);
-if(offenseEntries.length > 0){
-  const offenseGrandTotal = offenseEntries.reduce((s,[,v]) => s+v, 0);
-  const offenseMax = offenseEntries[0][1];
+const offenseTotalsAllTime = {"Murder and Non-Negligent Manslaughter": 30, "Forcible Sex Offenses": 523, "Robbery": 221, "Aggravated Assault": 1720, "Burglary": 1762, "Larceny - Pocket Picking": 18, "Larceny - Purse Snatching": 5, "Larceny - Shoplifting": 1395, "Larceny - From Motor Vehicle": 3389, "Larceny - Motor Vehicle Parts": 846, "Larceny - From Building": 1258, "Larceny - Coin-Operated Machine": 6, "Larceny - All Other": 3473, "Motor Vehicle Theft": 1469, "Negligent Manslaughter": 2, "Arson": 42, "Simple Assault": 10206, "Stalking": 154, "Intimidation": 1024, "Kidnapping/Abduction": 113, "Drug Offenses": 8022, "Embezzlement": 114, "Fraud": 5907, "Counterfeiting/Forgery": 695, "Extortion/Blackmail": 118, "Prostitutition": 12, "Non-Forcible Sex Offenses": 390, "Stolen Property Offenses": 219, "Destruction/Damage/Vandalism": 511, "Gambling Offenses": 33, "Weapons Offenses": 756, "Identity Theft": 1551, "Hacking/Computer Invasion": 15, "Human Trafficking - Commercial Sex Acts": 11, "Animal Cruelty": 76};
+const offenseTotalsByYear = {"2021": {"Murder and Non-Negligent Manslaughter": 1, "Forcible Sex Offenses": 91, "Robbery": 49, "Aggravated Assault": 366, "Burglary": 317, "Larceny - Pocket Picking": 6, "Larceny - Shoplifting": 189, "Larceny - From Motor Vehicle": 725, "Larceny - Motor Vehicle Parts": 202, "Larceny - From Building": 276, "Larceny - Coin-Operated Machine": 2, "Larceny - All Other": 690, "Motor Vehicle Theft": 219, "Arson": 11, "Simple Assault": 1877, "Stalking": 24, "Intimidation": 154, "Kidnapping/Abduction": 23, "Drug Offenses": 1063, "Embezzlement": 33, "Fraud": 1091, "Counterfeiting/Forgery": 122, "Extortion/Blackmail": 17, "Prostitutition": 1, "Non-Forcible Sex Offenses": 29, "Stolen Property Offenses": 24, "Destruction/Damage/Vandalism": 69, "Gambling Offenses": 5, "Weapons Offenses": 129, "Identity Theft": 413, "Hacking/Computer Invasion": 10, "Animal Cruelty": 5}, "2022": {"Murder and Non-Negligent Manslaughter": 4, "Forcible Sex Offenses": 91, "Robbery": 42, "Aggravated Assault": 303, "Burglary": 345, "Larceny - Pocket Picking": 6, "Larceny - Purse Snatching": 1, "Larceny - Shoplifting": 259, "Larceny - From Motor Vehicle": 671, "Larceny - Motor Vehicle Parts": 203, "Larceny - From Building": 303, "Larceny - Coin-Operated Machine": 1, "Larceny - All Other": 650, "Motor Vehicle Theft": 282, "Arson": 7, "Simple Assault": 2090, "Stalking": 27, "Intimidation": 145, "Kidnapping/Abduction": 21, "Drug Offenses": 1371, "Embezzlement": 19, "Fraud": 1029, "Counterfeiting/Forgery": 131, "Extortion/Blackmail": 24, "Prostitutition": 1, "Non-Forcible Sex Offenses": 61, "Stolen Property Offenses": 48, "Destruction/Damage/Vandalism": 52, "Gambling Offenses": 1, "Weapons Offenses": 183, "Identity Theft": 324, "Hacking/Computer Invasion": 2, "Human Trafficking - Commercial Sex Acts": 1, "Animal Cruelty": 5}, "2023": {"Murder and Non-Negligent Manslaughter": 5, "Forcible Sex Offenses": 109, "Robbery": 30, "Aggravated Assault": 297, "Burglary": 350, "Larceny - Pocket Picking": 1, "Larceny - Purse Snatching": 3, "Larceny - Shoplifting": 273, "Larceny - From Motor Vehicle": 642, "Larceny - Motor Vehicle Parts": 166, "Larceny - From Building": 288, "Larceny - Coin-Operated Machine": 2, "Larceny - All Other": 627, "Motor Vehicle Theft": 345, "Arson": 5, "Simple Assault": 1948, "Stalking": 35, "Intimidation": 201, "Kidnapping/Abduction": 17, "Drug Offenses": 1553, "Embezzlement": 17, "Fraud": 1070, "Counterfeiting/Forgery": 159, "Extortion/Blackmail": 23, "Prostitutition": 4, "Non-Forcible Sex Offenses": 79, "Stolen Property Offenses": 40, "Destruction/Damage/Vandalism": 83, "Gambling Offenses": 13, "Weapons Offenses": 158, "Identity Theft": 294, "Human Trafficking - Commercial Sex Acts": 2, "Animal Cruelty": 7}, "2024": {"Murder and Non-Negligent Manslaughter": 9, "Forcible Sex Offenses": 80, "Robbery": 31, "Aggravated Assault": 286, "Burglary": 284, "Larceny - Pocket Picking": 4, "Larceny - Purse Snatching": 1, "Larceny - Shoplifting": 287, "Larceny - From Motor Vehicle": 569, "Larceny - Motor Vehicle Parts": 124, "Larceny - From Building": 187, "Larceny - All Other": 622, "Motor Vehicle Theft": 241, "Arson": 8, "Simple Assault": 1640, "Stalking": 30, "Intimidation": 184, "Kidnapping/Abduction": 15, "Drug Offenses": 1402, "Embezzlement": 16, "Fraud": 981, "Counterfeiting/Forgery": 126, "Extortion/Blackmail": 20, "Prostitutition": 1, "Non-Forcible Sex Offenses": 74, "Stolen Property Offenses": 35, "Destruction/Damage/Vandalism": 128, "Gambling Offenses": 7, "Weapons Offenses": 99, "Identity Theft": 208, "Hacking/Computer Invasion": 2, "Animal Cruelty": 16}, "2025": {"Murder and Non-Negligent Manslaughter": 8, "Forcible Sex Offenses": 104, "Robbery": 39, "Aggravated Assault": 292, "Burglary": 306, "Larceny - Shoplifting": 268, "Larceny - From Motor Vehicle": 488, "Larceny - Motor Vehicle Parts": 103, "Larceny - From Building": 100, "Larceny - Coin-Operated Machine": 1, "Larceny - All Other": 617, "Motor Vehicle Theft": 250, "Arson": 8, "Simple Assault": 1649, "Stalking": 24, "Intimidation": 218, "Kidnapping/Abduction": 26, "Drug Offenses": 1803, "Embezzlement": 17, "Fraud": 1107, "Counterfeiting/Forgery": 118, "Extortion/Blackmail": 18, "Prostitutition": 3, "Non-Forcible Sex Offenses": 89, "Stolen Property Offenses": 50, "Destruction/Damage/Vandalism": 118, "Gambling Offenses": 2, "Weapons Offenses": 111, "Identity Theft": 192, "Hacking/Computer Invasion": 1, "Human Trafficking - Commercial Sex Acts": 5, "Animal Cruelty": 27}, "2026": {"Murder and Non-Negligent Manslaughter": 3, "Forcible Sex Offenses": 48, "Robbery": 30, "Aggravated Assault": 176, "Burglary": 160, "Larceny - Pocket Picking": 1, "Larceny - Shoplifting": 119, "Larceny - From Motor Vehicle": 294, "Larceny - Motor Vehicle Parts": 48, "Larceny - From Building": 104, "Larceny - All Other": 267, "Motor Vehicle Theft": 132, "Negligent Manslaughter": 2, "Arson": 3, "Simple Assault": 1002, "Stalking": 14, "Intimidation": 122, "Kidnapping/Abduction": 11, "Drug Offenses": 830, "Embezzlement": 12, "Fraud": 629, "Counterfeiting/Forgery": 39, "Extortion/Blackmail": 16, "Prostitutition": 2, "Non-Forcible Sex Offenses": 58, "Stolen Property Offenses": 22, "Destruction/Damage/Vandalism": 61, "Gambling Offenses": 5, "Weapons Offenses": 76, "Identity Theft": 120, "Human Trafficking - Commercial Sex Acts": 3, "Animal Cruelty": 16}};
+
+function renderOffenseBreakdown(totals){
+  const offenseTop = document.getElementById('offenseTop');
+  const tbody = document.getElementById('offenseTableBody');
+  const moreDetails = document.getElementById('offenseMoreDetails');
+  offenseTop.innerHTML = '';
+  tbody.innerHTML = '';
+
+  const entries = Object.entries(totals).sort((a,b) => b[1]-a[1]);
+  if(entries.length === 0){
+    offenseTop.innerHTML = '<p class="trend-caption" style="margin:0;">No offense data for this selection.</p>';
+    if(moreDetails) moreDetails.style.display = 'none';
+    return;
+  }
+  if(moreDetails) moreDetails.style.display = '';
+
+  const grandTotal = entries.reduce((s,[,v]) => s+v, 0);
+  const localMax = entries[0][1];
   const TOP_N = 10;
 
-  const offenseTop = document.getElementById('offenseTop');
-  offenseEntries.slice(0, TOP_N).forEach(([name, count]) => {
-    const pct = (count / offenseGrandTotal * 100).toFixed(1);
-    const barPct = (count / offenseMax * 100).toFixed(1);
+  entries.slice(0, TOP_N).forEach(([name, count]) => {
+    const pct = (count / grandTotal * 100).toFixed(1);
+    const barPct = (count / localMax * 100).toFixed(1);
     const row = document.createElement('div');
     row.className = 'offense-bar-row';
     row.innerHTML = `
@@ -343,14 +457,72 @@ if(offenseEntries.length > 0){
     offenseTop.appendChild(row);
   });
 
-  const tbody = document.getElementById('offenseTableBody');
-  offenseEntries.forEach(([name, count]) => {
-    const pct = (count / offenseGrandTotal * 100).toFixed(1);
+  entries.forEach(([name, count]) => {
+    const pct = (count / grandTotal * 100).toFixed(1);
     const tr = document.createElement('tr');
     tr.innerHTML = `<td>${name}</td><td class="num">${count.toLocaleString()}</td><td class="num">${pct}%</td>`;
     tbody.appendChild(tr);
   });
 }
+
+// ---- year filter controls ----
+function yearHasData(year){
+  return grid[year].some(v => v !== null && v > 0);
+}
+
+const yearFilterEl = document.getElementById('yearFilter');
+const trendHeading = document.getElementById('trendHeading');
+const trendCaption = document.getElementById('trendCaption');
+const offenseHeading = document.getElementById('offenseHeading');
+const offenseCaption = document.getElementById('offenseCaption');
+
+function applyYearFilter(year){
+  yearFilterEl.querySelectorAll('button').forEach(b => {
+    b.classList.toggle('active', b.dataset.year === year);
+  });
+
+  if(year === 'all'){
+    trendHeading.textContent = 'Trend Over Time';
+    trendCaption.textContent = 'Total offenses reported per month, chronologically. Gaps indicate not submitted or not yet published.';
+    renderTrendAllTime();
+    if(offenseHeading){
+      offenseHeading.textContent = 'Offense Type Breakdown';
+      offenseCaption.textContent = 'All-time totals by offense category.';
+      renderOffenseBreakdown(offenseTotalsAllTime);
+    }
+  } else {
+    trendHeading.textContent = `Trend Over Time - ${year}`;
+    trendCaption.textContent = `Total offenses reported per month in ${year}. Gaps indicate not submitted or not yet published.`;
+    renderTrendForYear(year);
+    if(offenseHeading){
+      offenseHeading.textContent = `Offense Type Breakdown - ${year}`;
+      offenseCaption.textContent = `Totals by offense category for ${year}.`;
+      renderOffenseBreakdown(offenseTotalsByYear[year] || {});
+    }
+  }
+}
+
+const allBtn = document.createElement('button');
+allBtn.textContent = 'All Time';
+allBtn.dataset.year = 'all';
+allBtn.className = 'active';
+allBtn.addEventListener('click', () => applyYearFilter('all'));
+yearFilterEl.appendChild(allBtn);
+
+years.forEach(year => {
+  const btn = document.createElement('button');
+  btn.textContent = year;
+  btn.dataset.year = year;
+  if(!yearHasData(year)){
+    btn.disabled = true;
+    btn.title = 'No submitted data for this year';
+  } else {
+    btn.addEventListener('click', () => applyYearFilter(year));
+  }
+  yearFilterEl.appendChild(btn);
+});
+
+applyYearFilter('all');
 </script>
 
 </div>
